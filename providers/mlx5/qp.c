@@ -40,12 +40,16 @@
 #include <util/mmio.h>
 #include <util/compiler.h>
 
+#include <lttng/tracef.h>
+
 #include "mlx5.h"
 #include "mlx5_ifc.h"
 #include "mlx5_trace.h"
 #include "wqe.h"
 
 #define MLX5_ATOMIC_SIZE 8
+
+#define WR_TRACE_MAX_SIZE 1000
 
 static const uint32_t mlx5_ib_opcode[] = {
 	[IBV_WR_SEND]			= MLX5_OPCODE_SEND,
@@ -61,6 +65,9 @@ static const uint32_t mlx5_ib_opcode[] = {
 	[IBV_WR_TSO]			= MLX5_OPCODE_TSO,
 	[IBV_WR_DRIVER1]		= MLX5_OPCODE_UMR,
 };
+
+static uint8_t wr_op_codes[WR_TRACE_MAX_SIZE];
+static uint8_t *wr_curr;
 
 static void *get_recv_wqe(struct mlx5_qp *qp, int n)
 {
@@ -754,6 +761,7 @@ static inline int mlx5_post_send_underlay(struct mlx5_qp *qp, struct ibv_send_wr
 static inline void post_send_db(struct mlx5_qp *qp, struct mlx5_bf *bf,
 				int nreq, int inl, int size, void *ctrl)
 {
+	// lttng_ust_tracef("Hello from post_send_db\r\n");
 	struct mlx5_context *ctx;
 
 	if (unlikely(!nreq))
@@ -804,6 +812,7 @@ static inline void post_send_db(struct mlx5_qp *qp, struct mlx5_bf *bf,
 static inline int _mlx5_post_send(struct ibv_qp *ibqp, struct ibv_send_wr *wr,
 				  struct ibv_send_wr **bad_wr)
 {
+	// lttng_ust_tracef("Hello from _mlx5_post_send\r\n");
 	struct mlx5_qp *qp = to_mqp(ibqp);
 	void *seg;
 	struct mlx5_wqe_eth_seg *eseg;
@@ -1158,6 +1167,7 @@ out:
 int mlx5_post_send(struct ibv_qp *ibqp, struct ibv_send_wr *wr,
 		   struct ibv_send_wr **bad_wr)
 {
+	// lttng_ust_tracef("Hello world from mlx5_post_send\r\n");
 #ifdef MW_DEBUG
 	if (wr->opcode == IBV_WR_BIND_MW) {
 		if (wr->bind_mw.mw->type == IBV_MW_TYPE_1)
@@ -1182,6 +1192,8 @@ enum {
 
 static void mlx5_send_wr_start(struct ibv_qp_ex *ibqp)
 {
+	// lttng_ust_tracef("Hello world from mlx5_send_wr_start\r\n");
+	wr_curr = wr_op_codes;
 	struct mlx5_qp *mqp = to_mqp((struct ibv_qp *)ibqp);
 
 	mlx5_spin_lock(&mqp->sq.lock);
@@ -1195,6 +1207,7 @@ static void mlx5_send_wr_start(struct ibv_qp_ex *ibqp)
 
 static int mlx5_send_wr_complete_error(struct ibv_qp_ex *ibqp)
 {
+	// lttng_ust_tracef("Hello world from mlx5_send_wr_complete_error\r\n");
 	struct mlx5_qp *mqp = to_mqp((struct ibv_qp *)ibqp);
 
 	/* Rolling back */
@@ -1206,6 +1219,7 @@ static int mlx5_send_wr_complete_error(struct ibv_qp_ex *ibqp)
 
 static int mlx5_send_wr_complete(struct ibv_qp_ex *ibqp)
 {
+	// lttng_ust_tracef("Hello world from mlx5_send_wr_complete\r\n");
 	struct mlx5_qp *mqp = to_mqp((struct ibv_qp *)ibqp);
 	int err = mqp->err;
 
@@ -1221,12 +1235,18 @@ static int mlx5_send_wr_complete(struct ibv_qp_ex *ibqp)
 
 out:
 	mlx5_spin_unlock(&mqp->sq.lock);
+	// for (uint32_t *curr = wr_op_codes; curr < wr_curr; curr++) {
+		rdma_tracepoint(rdma_core_mlx5, wr,
+			wr_op_codes,
+			wr_curr - wr_op_codes);
+	// }
 
 	return err;
 }
 
 static void mlx5_send_wr_abort(struct ibv_qp_ex *ibqp)
 {
+	// lttng_ust_tracef("Hello world from mlx5_send_wr_abort\r\n");
 	struct mlx5_qp *mqp = to_mqp((struct ibv_qp *)ibqp);
 
 	/* Rolling back */
@@ -1243,6 +1263,10 @@ static inline void _common_wqe_init_op(struct ibv_qp_ex *ibqp,
 static inline void _common_wqe_init_op(struct ibv_qp_ex *ibqp, int ib_op,
 				       uint8_t mlx5_op)
 {
+	*wr_curr = mlx5_op;
+	wr_curr++;
+	// lttng_ust_tracef("Hello world from _common_wqe_init_op, mlx5_op=%d\r\n", mlx5_op);
+
 	struct mlx5_qp *mqp = to_mqp((struct ibv_qp *)ibqp);
 	struct mlx5_wqe_ctrl_seg *ctrl;
 	uint8_t fence;
@@ -1333,6 +1357,8 @@ static inline void _mlx5_send_wr_send(struct ibv_qp_ex *ibqp,
 static inline void _mlx5_send_wr_send(struct ibv_qp_ex *ibqp,
 				      enum ibv_wr_opcode ib_op)
 {
+	// lttng_ust_tracef("Hello world from _mlx5_send_wr_send\r\n");
+	
 	struct mlx5_qp *mqp = to_mqp((struct ibv_qp *)ibqp);
 	size_t transport_seg_sz = 0;
 
@@ -1472,6 +1498,7 @@ static inline void _mlx5_send_wr_rdma(struct ibv_qp_ex *ibqp,
 				      uint64_t remote_addr,
 				      enum ibv_wr_opcode ib_op)
 {
+	// lttng_ust_tracef("Hello world from _mlx5_send_wr_rdma\r\n");
 	struct mlx5_qp *mqp = to_mqp((struct ibv_qp *)ibqp);
 	size_t transport_seg_sz = 0;
 	void *raddr_seg;

@@ -3,7 +3,7 @@
  * Copyright 2023 Bytedance.com, Inc. or its affiliates. All rights reserved.
  */
 
-#if defined(LTTNG_ENABLED)
+// #if defined(LTTNG_ENABLED)
 
 #undef LTTNG_UST_TRACEPOINT_PROVIDER
 #define LTTNG_UST_TRACEPOINT_PROVIDER rdma_core_mlx5
@@ -13,6 +13,8 @@
 
 #if !defined(__MLX5_TRACE_H__) || defined(LTTNG_UST_TRACEPOINT_HEADER_MULTI_READ)
 #define __MLX5_TRACE_H__
+
+#define WR_MAX_SIZE 100
 
 #include <lttng/tracepoint.h>
 #include <infiniband/verbs.h>
@@ -41,19 +43,38 @@ LTTNG_UST_TRACEPOINT_EVENT(
 	)
 )
 
+LTTNG_UST_TRACEPOINT_EVENT(
+	/* Tracepoint provider name */
+	rdma_core_mlx5,
+
+	/* Tracepoint name */
+	wr,
+
+	/* Input arguments */
+	LTTNG_UST_TP_ARGS(
+		uint8_t *, op_codes,
+		uint32_t, length
+	),
+
+	/* Output event fields */
+	LTTNG_UST_TP_FIELDS(
+		lttng_ust_field_sequence(uint8_t, op_codes, op_codes, uint32_t, length)
+	)
+)
+
 #define rdma_tracepoint(arg...) lttng_ust_tracepoint(arg)
 
 #endif /* __MLX5_TRACE_H__*/
 
 #include <lttng/tracepoint-event.h>
 
-#else
+// #else
 
-#ifndef __MLX5_TRACE_H__
-#define __MLX5_TRACE_H__
+// #ifndef __MLX5_TRACE_H__
+// #define __MLX5_TRACE_H__
 
-#define rdma_tracepoint(arg...)
+// #define rdma_tracepoint(arg...)
 
-#endif /* __MLX5_TRACE_H__*/
+// #endif /* __MLX5_TRACE_H__*/
 
-#endif /* defined(LTTNG_ENABLED) */
+// #endif /* defined(LTTNG_ENABLED) */

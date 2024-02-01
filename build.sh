@@ -1,6 +1,7 @@
 #!/bin/bash
 set -e
 
+EXTRA_CMAKE_FLAGS="-DENABLE_LTTNG=1"
 SRCDIR=`dirname $0`
 BUILDDIR="$SRCDIR/build"
 

@@ -75,3 +75,7 @@ Session.vim
 
 # python
 *.pyc
+
+# vscode
+.vscode/
+
