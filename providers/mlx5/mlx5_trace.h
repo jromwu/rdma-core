@@ -18,6 +18,7 @@
 
 #include <lttng/tracepoint.h>
 #include <infiniband/verbs.h>
+#include <stdlib.h>
 
 LTTNG_UST_TRACEPOINT_EVENT(
 	/* Tracepoint provider name */

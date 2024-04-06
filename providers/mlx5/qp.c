@@ -47,6 +47,8 @@
 #include "mlx5_trace.h"
 #include "wqe.h"
 
+#include "kutrace.h"
+
 #define MLX5_ATOMIC_SIZE 8
 
 #define WR_TRACE_MAX_SIZE 1000
@@ -761,7 +763,7 @@ static inline int mlx5_post_send_underlay(struct mlx5_qp *qp, struct ibv_send_wr
 static inline void post_send_db(struct mlx5_qp *qp, struct mlx5_bf *bf,
 				int nreq, int inl, int size, void *ctrl)
 {
-	// lttng_ust_tracef("Hello from post_send_db\r\n");
+	mark_a("db");
 	struct mlx5_context *ctx;
 
 	if (unlikely(!nreq))
@@ -807,12 +809,13 @@ static inline void post_send_db(struct mlx5_qp *qp, struct mlx5_bf *bf,
 	bf->offset ^= bf->buf_size;
 	if (bf->need_lock)
 		mlx5_spin_unlock(&bf->lock);
+	mark_a("/db");
 }
 
 static inline int _mlx5_post_send(struct ibv_qp *ibqp, struct ibv_send_wr *wr,
 				  struct ibv_send_wr **bad_wr)
 {
-	// lttng_ust_tracef("Hello from _mlx5_post_send\r\n");
+	mark_a("ps");
 	struct mlx5_qp *qp = to_mqp(ibqp);
 	void *seg;
 	struct mlx5_wqe_eth_seg *eseg;
@@ -1161,6 +1164,7 @@ out:
 
 	mlx5_spin_unlock(&qp->sq.lock);
 
+	mark_a("/ps");
 	return err;
 }
 
@@ -1192,7 +1196,7 @@ enum {
 
 static void mlx5_send_wr_start(struct ibv_qp_ex *ibqp)
 {
-	// lttng_ust_tracef("Hello world from mlx5_send_wr_start\r\n");
+	mark_a("wrs");
 	wr_curr = wr_op_codes;
 	struct mlx5_qp *mqp = to_mqp((struct ibv_qp *)ibqp);
 
@@ -1203,6 +1207,7 @@ static void mlx5_send_wr_start(struct ibv_qp_ex *ibqp)
 	mqp->err = 0;
 	mqp->nreq = 0;
 	mqp->inl_wqe = 0;
+	mark_a("/wrs");
 }
 
 static int mlx5_send_wr_complete_error(struct ibv_qp_ex *ibqp)
@@ -1219,7 +1224,7 @@ static int mlx5_send_wr_complete_error(struct ibv_qp_ex *ibqp)
 
 static int mlx5_send_wr_complete(struct ibv_qp_ex *ibqp)
 {
-	// lttng_ust_tracef("Hello world from mlx5_send_wr_complete\r\n");
+	mark_a("wrc");
 	struct mlx5_qp *mqp = to_mqp((struct ibv_qp *)ibqp);
 	int err = mqp->err;
 
@@ -1241,6 +1246,7 @@ out:
 			wr_curr - wr_op_codes);
 	// }
 
+	mark_a("/wrc");
 	return err;
 }
 

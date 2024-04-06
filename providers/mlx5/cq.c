@@ -46,6 +46,8 @@
 #include "mlx5.h"
 #include "wqe.h"
 
+#include "kutrace.h"
+
 enum {
 	CQ_OK					=  0,
 	CQ_EMPTY				= -1,
@@ -1001,6 +1003,7 @@ static inline int poll_cq(struct ibv_cq *ibcq, int ne,
 static inline int poll_cq(struct ibv_cq *ibcq, int ne,
 		      struct ibv_wc *wc, int cqe_ver)
 {
+	// mark_b("pcq");
 	struct mlx5_cq *cq = to_mcq(ibcq);
 	struct mlx5_resource *rsc = NULL;
 	struct mlx5_srq *srq = NULL;
@@ -1049,6 +1052,13 @@ static inline int poll_cq(struct ibv_cq *ibcq, int ne,
 		}
 	}
 
+	// only add mark to kutrace if something is polled
+	// to prevent putting too many marks
+	if (npolled != 0) {
+		char mark[13];
+		sprintf(mark, "/p%d", npolled);
+		mark_b(mark);
+	}
 	return err == CQ_POLL_ERR ? err : npolled;
 }
 
